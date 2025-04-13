@@ -7,11 +7,12 @@ from botocore.exceptions import BotoCoreError, ClientError
 from dynamodb_json import json_util
 
 from arcade.core.commons.logger import get_logger
+from arcade.core.interfaces.dynamodb_dao import IDynamoDBDao
 
 logger = get_logger("dynamodb")
 
 
-class DynamoDBDao:
+class DynamoDBDao(IDynamoDBDao):
     """
     Data Access Object for interacting with Amazon DynamoDB.
 

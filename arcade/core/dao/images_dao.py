@@ -5,9 +5,10 @@ import pytz
 
 from arcade.config.constants import MAX_VOTES_PER_TEAM, PP_IMAGES_TABLE
 from arcade.core.dao.base_ddb import DynamoDBDao
+from arcade.core.interfaces.images_dao import IImagesDao
 
 
-class ImagesDao(DynamoDBDao):
+class ImagesDao(DynamoDBDao, IImagesDao):
     """
     Data Access Object for handling image submissions and voting operations.
 
