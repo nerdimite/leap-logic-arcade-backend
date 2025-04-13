@@ -9,6 +9,7 @@ from arcade.core.dao.images_dao import ImagesDao
 from arcade.core.dao.leaderboard_dao import LeaderboardDao
 from arcade.core.dao.state_dao import StateDao
 from arcade.core.dao.teams_dao import TeamsDao
+from arcade.services.pic_perfect.admin import PicPerfectAdminService
 from arcade.services.pic_perfect.main import PicPerfectService
 
 logger = get_logger(__name__)
@@ -105,3 +106,20 @@ async def get_leaderboard(
     """Get the current leaderboard with team rankings and scores."""
     result = service.get_leaderboard()
     return result
+
+
+@router.get("/status")
+async def get_challenge_status(
+    service: PicPerfectService = Depends(get_pic_perfect_service),
+):
+    """Get the current challenge status.
+
+    Returns:
+        Dict containing:
+        - Current challenge state
+    """
+    # Get challenge state
+    challenge_state = service.state_dao.get_challenge_state(service.challenge_id)
+    current_state = challenge_state.get("state") if challenge_state else None
+
+    return {"status": "success", "challenge_state": current_state}
