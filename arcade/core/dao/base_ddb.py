@@ -6,7 +6,7 @@ import boto3
 from botocore.exceptions import BotoCoreError, ClientError
 from dynamodb_json import json_util
 
-from logic_arcade.core.commons.logger import get_logger
+from arcade.core.commons.logger import get_logger
 
 logger = get_logger("dynamodb")
 

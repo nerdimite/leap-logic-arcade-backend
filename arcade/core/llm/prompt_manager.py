@@ -3,7 +3,7 @@ from typing import Dict
 
 import jinja2
 
-from logic_arcade.config.constants import PROMPTS_PATH
+from arcade.config.constants import PROMPTS_PATH
 
 
 class PromptManager:

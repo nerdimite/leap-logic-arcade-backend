@@ -3,13 +3,23 @@ from typing import Dict, List, Optional, Set, Union
 
 import pytz
 
-from logic_arcade.config.constants import MAX_VOTES_PER_TEAM, PP_IMAGES_TABLE
-from logic_arcade.core.dao.base_ddb import DynamoDBDao
+from arcade.config.constants import MAX_VOTES_PER_TEAM, PP_IMAGES_TABLE
+from arcade.core.dao.base_ddb import DynamoDBDao
 
 
 class ImagesDao(DynamoDBDao):
     """
     Data Access Object for handling image submissions and voting operations.
+
+    DynamoDB Table Schema:
+    - Primary Key: teamName (str) - Team identifier or 'HIDDEN_IMAGE' for original image
+    - Attributes:
+        - imageUrl (str) - URL to the generated/uploaded image
+        - prompt (str) - Prompt used to generate the image
+        - timestamp (str) - ISO format timestamp in Asia/Kolkata timezone
+        - isHidden (bool) - Flag to identify if this is the hidden original image
+        - votes (set[str]) - Set of team names that voted for this image
+        - votesGiven (set[str]) - Set of teams this team has voted for
     """
 
     def __init__(self):

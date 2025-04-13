@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "logic_arcade"
+name = "arcade"
 version = "0.1.0"
 description = ""
 authors = ["nerdimite <bhavesh.laddagiri1@gmail.com>"]
@@ -21,8 +21,8 @@ dynamodb-json = "^1.4.2"
 pytz = "^2025.2"
 
 [tool.poetry.scripts]
-dev = "logic_arcade.main:dev"
-start = "logic_arcade.main:prod"
+dev = "arcade.main:dev"
+start = "arcade.main:prod"
 
 [build-system]
 requires = ["poetry-core"]

@@ -11,8 +11,8 @@ from tenacity import (
     wait_exponential,
 )
 
-from logic_arcade.core.commons.logger import get_logger
-from logic_arcade.core.interfaces.llm import BaseChatMessage, LLMProvider
+from arcade.core.commons.logger import get_logger
+from arcade.core.interfaces.llm import BaseChatMessage, LLMProvider
 
 logger = get_logger("openai")
 

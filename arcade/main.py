@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 
-from logic_arcade.api.routes.pic_perfect import router as pic_perfect_router
+from arcade.api.routes.pic_perfect import router as pic_perfect_router
 
 # Load environment variables
 load_dotenv()

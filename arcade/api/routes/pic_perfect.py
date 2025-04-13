@@ -2,8 +2,8 @@ from typing import Optional
 
 from fastapi import APIRouter, Header
 
-from logic_arcade.api.schemas.request import SubmitRequest
-from logic_arcade.core.commons.logger import get_logger
+from arcade.api.schemas.request import SubmitRequest
+from arcade.core.commons.logger import get_logger
 
 logger = get_logger(__name__)
 
