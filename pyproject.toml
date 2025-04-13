@@ -27,3 +27,11 @@ start = "arcade.main:prod"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.group.test.dependencies]
+pytest = "^8.3.5"
+pytest-cov = "^4.1.0"
+pytest-env = "^1.0.1"
+pytest-mock = "^3.11.1"
+moto = "^5.1.3"
+httpx = "^0.24.1"  # For FastAPI TestClient
