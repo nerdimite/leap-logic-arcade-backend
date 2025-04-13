@@ -4,9 +4,13 @@ from unittest.mock import patch
 
 import pytest
 
-from arcade.config.constants import (ARCADE_STATE_TABLE, MAX_VOTES_PER_TEAM,
-                                     PP_IMAGES_TABLE, PP_LEADERBOARD_TABLE,
-                                     TEAMS_TABLE)
+from arcade.config.constants import (
+    ARCADE_STATE_TABLE,
+    MAX_VOTES_PER_TEAM,
+    PP_IMAGES_TABLE,
+    PP_LEADERBOARD_TABLE,
+    TEAMS_TABLE,
+)
 from arcade.core.dao.images_dao import ImagesDao
 from arcade.core.dao.leaderboard_dao import LeaderboardDao
 from arcade.core.dao.state_dao import StateDao
@@ -262,6 +266,69 @@ class TestPicPerfectAdminServiceIntegration:
             # Verify state updated in database
             challenge_state = state_dao.get_challenge_state("pic-perfect")
             assert challenge_state["state"] == ChallengeState.VOTING.value
+
+    def test_get_voting_status(self, service, images_dao, state_dao):
+        """Test getting voting status."""
+        # Arrange
+        # Submit images for all teams
+        for i, team in enumerate(["team1", "team2", "team3"]):
+            images_dao.add_image(
+                team, f"http://example.com/image{i+1}.png", f"prompt{i+1}"
+            )
+        images_dao.add_hidden_image("http://example.com/hidden.png", "hidden prompt")
+
+        # Change challenge state to voting
+        state_dao.update_challenge_state(
+            "pic-perfect", {"state": ChallengeState.VOTING.value}
+        )
+
+        # Set team1 to have used all votes
+        images_dao.vote_on_image("team1", ["team2", "team3", "HIDDEN_IMAGE"])
+
+        # Act
+        result = service.get_voting_status()
+
+        # Assert
+        assert result["teams_completed_voting"] == 1
+        assert result["total_teams"] == 3
+        assert "team2" in result["pending_teams"]
+        assert "team3" in result["pending_teams"]
+        assert result["can_transition_to_scoring"] is False
+
+    def test_get_submission_status(self, service, images_dao):
+        """Test getting submission status."""
+        # Arrange
+        # Submit images for team1 and team2
+        images_dao.add_image("team1", "http://example.com/image1.png", "prompt1")
+        images_dao.add_image("team2", "http://example.com/image2.png", "prompt2")
+
+        # Act
+        result = service.get_submission_status()
+
+        # Assert
+        assert result["teams_submitted"] == 2
+        assert result["total_teams"] == 3
+        assert "team3" in result["pending_teams"]
+        assert result["can_transition_to_voting"] is False
+
+    def test_get_submission_status_all_submitted(self, service, images_dao, teams_dao):
+        """Test getting submission status when all teams have submitted."""
+        # Arrange
+        # Delete team3
+        teams_dao.delete_team("team3")
+
+        # Submit images for team1 and team2
+        images_dao.add_image("team1", "http://example.com/image1.png", "prompt1")
+        images_dao.add_image("team2", "http://example.com/image2.png", "prompt2")
+
+        # Act
+        result = service.get_submission_status()
+
+        # Assert
+        assert result["teams_submitted"] == 2
+        assert result["total_teams"] == 2
+        assert result["pending_teams"] == []
+        assert result["can_transition_to_voting"] is True
 
     def test_start_challenge(self, service, state_dao, images_dao):
         """Test starting a challenge."""

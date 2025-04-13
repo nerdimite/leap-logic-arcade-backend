@@ -299,12 +299,15 @@ class PicPerfectAdminService:
 
         return False
 
-    def can_transition_to_voting(self) -> bool:
+    def get_submission_status(self) -> Dict:
         """
-        Check if the challenge can transition to voting phase.
+        Get the status of team submissions.
+
+        Checks which teams have submitted images against the total registered teams.
 
         Returns:
-            Boolean indicating if all teams have submitted entries
+            Dict containing counts of teams submitted, total teams, list of pending teams,
+            and a flag indicating if the challenge can transition to voting phase
         """
         # Get all teams
         all_teams = self.teams_dao.get_all_teams()
@@ -314,13 +317,72 @@ class PicPerfectAdminService:
         all_images = self.images_dao.get_all_images()
         submitted_team_names = [image.get("teamName") for image in all_images]
 
-        # Check if hidden image exists
-        hidden_image = self.images_dao.get_hidden_image()
-        if not hidden_image:
-            return False
+        # Calculate pending teams
+        pending_teams = []
+        for team in all_teams:
+            team_name = team.get("teamName")
+            if team_name not in submitted_team_names:
+                pending_teams.append(team_name)
 
-        # All teams must have submitted and hidden image must exist
-        return len(submitted_team_names) == total_teams and total_teams > 0
+        # Check if all teams have submitted
+        can_transition = len(pending_teams) == 0 and total_teams > 0
+
+        return {
+            "teams_submitted": len(submitted_team_names),
+            "total_teams": total_teams,
+            "pending_teams": pending_teams,
+            "can_transition_to_voting": can_transition,
+        }
+
+    def get_voting_status(self) -> Dict:
+        """
+        Get the status of team voting.
+
+        Checks which teams have used all their votes against the total participating teams.
+
+        Returns:
+            Dict containing counts of teams that have completed voting, total teams,
+            list of pending teams, and a flag indicating if the challenge can transition to scoring phase
+        """
+        # Get all teams with image submissions
+        all_images = self.images_dao.get_all_images()
+        participating_teams = [
+            image.get("teamName")
+            for image in all_images
+            if image.get("teamName") != "HIDDEN_IMAGE"
+        ]
+        total_teams = len(participating_teams)
+
+        # Check which teams have used all their votes
+        teams_completed_voting = []
+        teams_pending_voting = []
+
+        for team_name in participating_teams:
+            remaining_votes = self.images_dao.get_votes_remaining(team_name)
+            if remaining_votes == 0:
+                teams_completed_voting.append(team_name)
+            else:
+                teams_pending_voting.append(team_name)
+
+        # Check if all teams have completed voting
+        can_transition = len(teams_completed_voting) == total_teams and total_teams > 0
+
+        return {
+            "teams_completed_voting": len(teams_completed_voting),
+            "total_teams": total_teams,
+            "pending_teams": teams_pending_voting,
+            "can_transition_to_scoring": can_transition,
+        }
+
+    def can_transition_to_voting(self) -> bool:
+        """
+        Check if the challenge can transition to voting phase.
+
+        Returns:
+            Boolean indicating if all teams have submitted entries
+        """
+        submission_status = self.get_submission_status()
+        return submission_status.get("can_transition_to_voting", False)
 
     def can_transition_to_scoring(self) -> bool:
         """
@@ -329,19 +391,8 @@ class PicPerfectAdminService:
         Returns:
             Boolean indicating if voting period should be closed
         """
-        # Get all teams with image submissions
-        all_images = self.images_dao.get_all_images()
-        participating_teams = [image.get("teamName") for image in all_images]
-        total_teams = len(participating_teams)
-
-        # Check which teams have used all their votes
-        for team_name in participating_teams:
-            remaining_votes = self.images_dao.get_votes_remaining(team_name)
-            if remaining_votes > 0:
-                return False
-
-        # All teams must have used all their votes
-        return total_teams > 0
+        voting_status = self.get_voting_status()
+        return voting_status.get("can_transition_to_scoring", False)
 
     def start_challenge(
         self, image_url: str, prompt: str, config: Optional[Dict[str, Any]] = None
@@ -390,3 +441,50 @@ class PicPerfectAdminService:
         except Exception as e:
             logger.error(f"Error starting challenge: {str(e)}")
             return {"success": False, "message": str(e)}
+
+    def clean_reset(self) -> Dict[str, Any]:
+        """Reset all tables by deleting all entries.
+
+        This method:
+        1. Deletes all images (including hidden image)
+        2. Resets the leaderboard
+        3. Resets challenge state
+        4. Keeps team registrations intact
+
+        Returns:
+            Dict containing success status and details of what was reset
+        """
+        try:
+            # Reset images
+            images_deleted = self.images_dao.delete_all_images()
+
+            # Reset leaderboard
+            leaderboard_reset = self.leaderboard_dao.reset_leaderboard(
+                self.challenge_id
+            )
+
+            # Reset challenge state
+            state_reset = self.state_dao.delete_challenge_state(self.challenge_id)
+
+            # Overall success is true only if all operations succeeded
+            success = bool(images_deleted >= 0 and leaderboard_reset and state_reset)
+
+            return {
+                "success": success,
+                "message": (
+                    "Challenge data reset successfully"
+                    if success
+                    else "Some reset operations failed"
+                ),
+                "details": {
+                    "images_deleted": images_deleted,
+                    "leaderboard_reset": leaderboard_reset,
+                    "state_reset": state_reset,
+                },
+            }
+        except Exception as e:
+            logger.error(f"Error during clean reset: {str(e)}")
+            return {
+                "success": False,
+                "message": f"Failed to reset challenge data: {str(e)}",
+            }
