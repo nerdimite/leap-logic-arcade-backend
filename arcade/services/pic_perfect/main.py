@@ -1,10 +1,42 @@
+import logging
 from typing import Any, Dict, List, Optional
 
+from arcade.config.constants import MAX_VOTES_PER_TEAM, PP_LEADERBOARD_TABLE
+from arcade.core.dao.images_dao import ImagesDao
+from arcade.core.dao.leaderboard_dao import LeaderboardDao
+from arcade.core.dao.state_dao import StateDao
+from arcade.core.dao.teams_dao import TeamsDao
 from arcade.types import ChallengeState
+
+logger = logging.getLogger(__name__)
 
 
 class PicPerfectService:
     """Interface for Pic Perfect challenge business logic."""
+
+    def __init__(
+        self,
+        images_dao: ImagesDao,
+        state_dao: StateDao,
+        leaderboard_dao: LeaderboardDao,
+        teams_dao: TeamsDao,
+        challenge_id: str = "pic-perfect",
+    ):
+        """
+        Initialize the Pic Perfect service with required dependencies.
+
+        Args:
+            images_dao: Data access object for image operations
+            state_dao: Data access object for challenge state operations
+            leaderboard_dao: Data access object for leaderboard operations
+            teams_dao: Data access object for team operations
+            challenge_id: Identifier for the challenge
+        """
+        self.images_dao = images_dao
+        self.state_dao = state_dao
+        self.leaderboard_dao = leaderboard_dao
+        self.teams_dao = teams_dao
+        self.challenge_id = challenge_id
 
     def submit_team_image(self, team_name: str, image_url: str, prompt: str) -> Dict:
         """
@@ -21,7 +53,42 @@ class PicPerfectService:
         Raises:
             ValueError: If team has already submitted an image
         """
-        ...
+        # Check if challenge is in submission state
+        challenge_state = self.state_dao.get_challenge_state(self.challenge_id)
+        if not challenge_state:
+            raise ValueError(f"Challenge {self.challenge_id} not initialized")
+
+        if challenge_state.get("state") != ChallengeState.SUBMISSION.value:
+            raise ValueError(
+                f"Challenge is not in submission state. Current state: {challenge_state.get('state')}"
+            )
+
+        # Submit image
+        try:
+            result = self.images_dao.add_image(team_name, image_url, prompt)
+
+            # Update leaderboard with team's image URL
+            self.leaderboard_dao.update_score(
+                self.challenge_id,
+                team_name,
+                {
+                    "imageUrl": image_url,
+                    "totalPoints": 0,
+                    "deceptionPoints": 0,
+                    "discoveryPoints": 0,
+                },
+            )
+
+            return {
+                "success": True,
+                "message": "Image submitted successfully",
+                "timestamp": result.get("timestamp"),
+                "team_name": team_name,
+                "image_url": image_url,
+            }
+        except Exception as e:
+            logger.error(f"Error submitting image for team {team_name}: {str(e)}")
+            return {"success": False, "message": str(e)}
 
     def cast_votes(self, team_name: str, voted_teams: List[str]) -> Dict:
         """
@@ -39,7 +106,47 @@ class PicPerfectService:
                        If team tries to vote for their own image
                        If team tries to vote for the same image multiple times
         """
-        ...
+        # Check if challenge is in voting state
+        challenge_state = self.state_dao.get_challenge_state(self.challenge_id)
+        if not challenge_state:
+            raise ValueError(f"Challenge {self.challenge_id} not initialized")
+
+        if challenge_state.get("state") != ChallengeState.VOTING.value:
+            raise ValueError(
+                f"Challenge is not in voting state. Current state: {challenge_state.get('state')}"
+            )
+
+        # Verify team has submitted an image
+        team_image = self.images_dao.get_team_image(team_name)
+        if not team_image:
+            raise ValueError(
+                f"Team {team_name} has not submitted an image and cannot vote"
+            )
+
+        # Cast votes
+        try:
+            result = self.images_dao.vote_on_image(team_name, voted_teams)
+            remaining_votes = self.images_dao.get_votes_remaining(team_name)
+
+            # Check if team voted for the hidden image
+            hidden_image = self.images_dao.get_hidden_image()
+            if hidden_image and "HIDDEN_IMAGE" in voted_teams:
+                # Team correctly identified the hidden image, award 10 discovery points
+                self.leaderboard_dao.update_score(
+                    self.challenge_id,
+                    team_name,
+                    {"discoveryPoints": 10, "votedForHidden": True},
+                )
+
+            return {
+                "success": True,
+                "message": "Votes cast successfully",
+                "voted_teams": result.get("voted_for", []),
+                "remaining_votes": remaining_votes,
+            }
+        except Exception as e:
+            logger.error(f"Error casting votes for team {team_name}: {str(e)}")
+            return {"success": False, "message": str(e)}
 
     def get_voting_pool(self, requesting_team: str) -> List[Dict]:
         """
@@ -51,7 +158,20 @@ class PicPerfectService:
         Returns:
             List of image details (team name, image URL, prompt) for voting
         """
-        ...
+        # Check if challenge is in voting state
+        challenge_state = self.state_dao.get_challenge_state(self.challenge_id)
+        if not challenge_state:
+            raise ValueError(f"Challenge {self.challenge_id} not initialized")
+
+        if challenge_state.get("state") != ChallengeState.VOTING.value:
+            raise ValueError(
+                f"Challenge is not in voting state. Current state: {challenge_state.get('state')}"
+            )
+
+        # Get all images excluding the requesting team (hidden image is included by default)
+        images = self.images_dao.get_all_images(exclude_teams=requesting_team)
+
+        return images
 
     def get_team_status(self, team_name: str) -> Dict:
         """
@@ -64,7 +184,23 @@ class PicPerfectService:
             Dict containing submission status, image details (if submitted),
             list of teams voted for, and remaining votes
         """
-        ...
+        # Get team image
+        team_image = self.images_dao.get_team_image(team_name)
+
+        # Get voting status
+        votes_given = self.images_dao.get_votes_given_by_team(team_name)
+        votes_remaining = self.images_dao.get_votes_remaining(team_name)
+
+        # Get team score from leaderboard
+        team_score = self.leaderboard_dao.get_team_score(self.challenge_id, team_name)
+
+        return {
+            "has_submitted": team_image is not None,
+            "image_details": team_image if team_image else None,
+            "votes_given": votes_given,
+            "votes_remaining": votes_remaining,
+            "score": team_score,
+        }
 
     def get_leaderboard(self) -> Dict:
         """
@@ -76,7 +212,27 @@ class PicPerfectService:
             - Hidden image details
             - Current challenge state
         """
-        ...
+        # Get leaderboard
+        leaderboard = self.leaderboard_dao.get_leaderboard(self.challenge_id)
+
+        # Get challenge state
+        challenge_state = self.state_dao.get_challenge_state(self.challenge_id)
+
+        # Get hidden image (only include if challenge is complete)
+        hidden_image = None
+        if (
+            challenge_state
+            and challenge_state.get("state") == ChallengeState.COMPLETE.value
+        ):
+            hidden_image = self.images_dao.get_hidden_image()
+
+        return {
+            "leaderboard": leaderboard,
+            "hidden_image": hidden_image,
+            "challenge_state": (
+                challenge_state.get("state") if challenge_state else None
+            ),
+        }
 
     def get_submission_status(self) -> Dict:
         """
@@ -88,7 +244,30 @@ class PicPerfectService:
             Dict containing counts of teams submitted, total teams, list of pending teams,
             and a flag indicating if the challenge can transition to voting phase
         """
-        ...
+        # Get all teams
+        all_teams = self.teams_dao.get_all_teams()
+        total_teams = len(all_teams)
+
+        # Get all submitted images
+        all_images = self.images_dao.get_all_images()
+        submitted_team_names = [image.get("teamName") for image in all_images]
+
+        # Calculate pending teams
+        pending_teams = []
+        for team in all_teams:
+            team_name = team.get("teamName")
+            if team_name not in submitted_team_names:
+                pending_teams.append(team_name)
+
+        # Check if all teams have submitted
+        can_transition = len(pending_teams) == 0 and total_teams > 0
+
+        return {
+            "teams_submitted": len(submitted_team_names),
+            "total_teams": total_teams,
+            "pending_teams": pending_teams,
+            "can_transition_to_voting": can_transition,
+        }
 
     def get_voting_status(self) -> Dict:
         """
@@ -100,4 +279,48 @@ class PicPerfectService:
             Dict containing counts of teams that have completed voting, total teams,
             list of pending teams, and a flag indicating if the challenge can transition to scoring phase
         """
-        ...
+        # Get all teams with image submissions
+        all_images = self.images_dao.get_all_images()
+        participating_teams = [image.get("teamName") for image in all_images if image.get("teamName") != "HIDDEN_IMAGE"]
+        total_teams = len(participating_teams)
+
+        # Check which teams have used all their votes
+        teams_completed_voting = []
+        teams_pending_voting = []
+
+        for team_name in participating_teams:
+            remaining_votes = self.images_dao.get_votes_remaining(team_name)
+            if remaining_votes == 0:
+                teams_completed_voting.append(team_name)
+            else:
+                teams_pending_voting.append(team_name)
+
+        # Check if all teams have completed voting
+        can_transition = len(teams_completed_voting) == total_teams and total_teams > 0
+
+        return {
+            "teams_completed_voting": len(teams_completed_voting),
+            "total_teams": total_teams,
+            "pending_teams": teams_pending_voting,
+            "can_transition_to_scoring": can_transition,
+        }
+
+    def can_transition_to_voting(self) -> bool:
+        """
+        Check if the challenge can transition to voting phase.
+
+        Returns:
+            Boolean indicating if all teams have submitted entries
+        """
+        submission_status = self.get_submission_status()
+        return submission_status.get("can_transition_to_voting", False)
+
+    def can_transition_to_scoring(self) -> bool:
+        """
+        Check if the challenge can transition to scoring phase.
+
+        Returns:
+            Boolean indicating if voting period should be closed
+        """
+        voting_status = self.get_voting_status()
+        return voting_status.get("can_transition_to_scoring", False)

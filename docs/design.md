@@ -202,13 +202,18 @@ class IStateDao(Protocol):
 
 ### Core Service Boilerplate
 
-The typed boilerplate for the service is as follows:
+The service implementation is split into two classes for better modularization:
+
+1. `PicPerfectService` - Contains non-admin methods for team interactions
+2. `PicPerfectAdminService` - Contains admin-only methods for challenge management
+
+The typed boilerplate for these services is as follows:
 
 **`PicPerfectService` Class**
 
 ```python
-class IPicPerfectService():
-    """Service for Pic Perfect challenge business logic."""
+class PicPerfectService:
+    """Service for Pic Perfect challenge non-admin business logic."""
 
     def submit_team_image(self, team_name: str, image_url: str, prompt: str) -> Dict:
         """
@@ -224,22 +229,6 @@ class IPicPerfectService():
 
         Raises:
             ValueError: If team has already submitted an image
-        """
-        ...
-
-    def submit_hidden_image(self, image_url: str, prompt: str) -> Dict:
-        """
-        Submit the hidden original image (admin only).
-
-        Args:
-            image_url: URL to the original image
-            prompt: Text prompt describing the image
-
-        Returns:
-            Dict containing submission status and any error messages
-
-        Raises:
-            ValueError: If hidden image already exists
         """
         ...
 
@@ -286,6 +275,65 @@ class IPicPerfectService():
         """
         ...
 
+    def get_leaderboard(self) -> Dict:
+        """
+        Get the current leaderboard with team rankings and scores.
+
+        Returns:
+            Dict containing:
+            - List of teams with scores, ranked by total points
+            - Hidden image details
+            - Current challenge state
+        """
+        ...
+
+    def get_submission_status(self) -> Dict:
+        """
+        Get the status of team submissions.
+
+        Checks which teams have submitted images against the total registered teams.
+
+        Returns:
+            Dict containing counts of teams submitted, total teams, list of pending teams,
+            and a flag indicating if the challenge can transition to voting phase
+        """
+        ...
+
+    def get_voting_status(self) -> Dict:
+        """
+        Get the status of team voting.
+
+        Checks which teams have used all their votes against the total participating teams.
+
+        Returns:
+            Dict containing counts of teams that have completed voting, total teams,
+            list of pending teams, and a flag indicating if the challenge can transition to scoring phase
+        """
+        ...
+```
+
+**`PicPerfectAdminService` Class**
+
+```python
+class PicPerfectAdminService:
+    """Service for Pic Perfect challenge admin-only business logic."""
+
+    def submit_hidden_image(self, image_url: str, prompt: str) -> Dict:
+        """
+        Submit the hidden original image (admin only).
+
+        Args:
+            image_url: URL to the original image
+            prompt: Text prompt describing the image
+
+        Returns:
+            Dict containing submission status and any error messages
+
+        Raises:
+            ValueError: If hidden image already exists
+        """
+        ...
+
     def calculate_scores(self) -> List[Dict]:
         """
         Calculate scores for all teams based on voting results.
@@ -296,18 +344,6 @@ class IPicPerfectService():
 
         Returns:
             List of team scores with deception, discovery, and total points
-        """
-        ...
-
-    def get_leaderboard(self) -> Dict:
-        """
-        Get the current leaderboard with team rankings and scores.
-
-        Returns:
-            Dict containing:
-            - List of teams with scores, ranked by total points
-            - Hidden image details
-            - Current challenge state
         """
         ...
 
@@ -342,30 +378,6 @@ class IPicPerfectService():
         """
         ...
 
-    def get_submission_status(self) -> Dict:
-        """
-        Get the status of team submissions.
-
-        Checks which teams have submitted images against the total registered teams.
-
-        Returns:
-            Dict containing counts of teams submitted, total teams, list of pending teams,
-            and a flag indicating if the challenge can transition to voting phase
-        """
-        ...
-
-    def get_voting_status(self) -> Dict:
-        """
-        Get the status of team voting.
-
-        Checks which teams have used all their votes against the total participating teams.
-
-        Returns:
-            Dict containing counts of teams that have completed voting, total teams,
-            list of pending teams, and a flag indicating if the challenge can transition to scoring phase
-        """
-        ...
-
     def can_transition_to_voting(self) -> bool:
         """
         Check if the challenge can transition to voting phase.
@@ -381,6 +393,27 @@ class IPicPerfectService():
 
         Returns:
             Boolean indicating if voting period should be closed
+        """
+        ...
+
+    def start_challenge(
+        self, image_url: str, prompt: str, config: Optional[Dict[str, Any]] = None
+    ) -> Dict:
+        """
+        Initialize challenge and set hidden image in one operation (admin only).
+
+        This method:
+        1. Initializes the challenge with the given configuration
+        2. Sets the hidden image
+        3. Updates challenge metadata
+
+        Args:
+            image_url: URL to the original image
+            prompt: Text prompt describing the image
+            config: Optional challenge configuration parameters
+
+        Returns:
+            Dict containing success status, challenge state, and hidden image status
         """
         ...
 ```

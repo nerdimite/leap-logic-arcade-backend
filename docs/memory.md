@@ -194,3 +194,79 @@ Additional Notes:
 - Used consistent patterns for testing with the other DAO components
 - Implemented proper sorting logic to ensure the leaderboard is always in the correct order
 - Used the dictionary unpacking (`**`) syntax for cleaner code when creating new entries
+
+Log #5:
+Summary: Implemented PicPerfectService and PicPerfectAdminService for the Pic Perfect challenge with proper separation of admin and non-admin functionality.
+
+Core Changes:
+
+- Implemented PicPerfectService class with methods for team-based operations (image submission, voting, status checks)
+- Implemented PicPerfectAdminService class with admin-only methods (challenge management, scoring, state transitions)
+- Split service implementation into admin and non-admin methods for better modularization
+- Updated design document to reflect the new service architecture
+- Implemented robust error handling and state validation throughout services
+- Added proper dependency injection for all DAO components
+- Ensured all methods follow the interface specifications
+
+Context Used:
+
+- arcade/types/**init**.py for ChallengeState enum
+- arcade/config/constants.py for configuration constants
+- arcade/core/dao classes for data access
+- docs/design.md for service specifications
+- Interface definitions from arcade/core/interfaces
+
+Files Modified / Created:
+
+- arcade/services/pic_perfect/main.py (implemented PicPerfectService)
+- arcade/services/pic_perfect/admin.py (implemented PicPerfectAdminService)
+- docs/design.md (updated to reflect service split)
+
+Additional Notes:
+
+- Added state validation to ensure operations can only be performed in the appropriate challenge states
+- Implemented logging for error tracking
+- Added comprehensive input validation
+- Created helper methods for state transition validation
+- Added metadata management for challenge state
+- Implemented proper integration with all required DAOs
+- Ensured consistent error handling and return formats
+
+Log #6:
+Summary: Implemented comprehensive tests for PicPerfectService and PicPerfectAdminService classes.
+
+Core Changes:
+
+- Created unit tests for PicPerfectService with full coverage of all methods and edge cases
+- Created unit tests for PicPerfectAdminService with full coverage of all methods and edge cases
+- Implemented integration tests using moto to simulate DynamoDB interactions
+- Created test fixtures for setting up test environment with required database tables
+- Added comprehensive test coverage for all service operations including error handling
+- Implemented end-to-end tests for the full challenge lifecycle
+
+Context Used:
+
+- arcade/services/pic_perfect/main.py for PicPerfectService implementation
+- arcade/services/pic_perfect/admin.py for PicPerfectAdminService implementation
+- arcade/core/dao classes for data access layer interaction
+- arcade/config/constants.py for configuration constants
+- docs/style_guide.md for test implementation guidelines
+- Previous test files as reference for moto setup and testing patterns
+
+Files Created:
+
+- tests/services/pic_perfect/test_pic_perfect_service.py (unit tests)
+- tests/services/pic_perfect/test_pic_perfect_admin_service.py (unit tests)
+- tests/services/pic_perfect/test_pic_perfect_service_integration.py (integration tests)
+- tests/services/pic_perfect/test_pic_perfect_admin_service_integration.py (integration tests)
+
+Additional Notes:
+
+- Followed the project's testing guidelines with @pytest.mark decorators for test categorization
+- Used the Arrange-Act-Assert pattern consistently in all tests
+- Added fixtures for mocking AWS credentials and DynamoDB tables
+- Created separate test classes for unit and integration tests
+- Implemented full end-to-end test for the challenge lifecycle
+- Ensured proper test isolation using function-scoped fixtures
+- Added detailed docstrings to all test methods
+- Verified both success cases and error handling for all methods

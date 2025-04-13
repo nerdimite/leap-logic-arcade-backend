@@ -209,7 +209,144 @@ Each core component should:
          # Example: test_submit_image_invalid_format_raises_error()
      ```
 
-4. **Fixtures and Configuration**
+4. **AWS and DynamoDB Integration Testing**
+
+   - Use the `moto` library to mock AWS services for integration tests
+   - Use the session-scoped `aws_mock` fixture from `conftest.py` which handles AWS mocking via `mock_aws`
+   - Follow these steps to set up proper AWS integration tests:
+
+     1. **Import and use the aws_mock fixture in your test class**:
+
+        ```python
+        import pytest
+
+        @pytest.mark.integration
+        class TestYourServiceIntegration:
+            """Integration tests for YourService using moto."""
+            def test_your_method(self, aws_mock, dynamodb_resource, setup_test_tables):
+                # Test with mocked AWS services
+                ...
+        ```
+
+     2. **Use other AWS-related fixtures from `tests/conftest.py`**:
+
+        ```python
+        def test_your_method(self, aws_mock, dynamodb_resource, setup_test_tables):
+            # aws_mock: Provides AWS service mocking for the entire test session
+            # dynamodb_resource: Provides the mocked DynamoDB resource
+            # setup_test_tables: Creates required test tables
+            ...
+        ```
+
+     3. **Create DAO fixtures with patched table names**:
+
+        ```python
+        @pytest.fixture(scope="function")
+        def your_dao(self, aws_mock, dynamodb_resource, setup_test_tables):
+            """Create YourDao instance with mocked DynamoDB."""
+            # Initialize the DAO and patch it to use the test table name
+            TEST_TABLE_NAME = os.environ["DYNAMODB_TABLE_PREFIX"] + ACTUAL_TABLE_NAME
+            with patch(
+                "arcade.config.constants.ACTUAL_TABLE_NAME",
+                TEST_TABLE_NAME,
+            ):
+                dao = YourDao()
+                dao.table = dynamodb_resource.Table(TEST_TABLE_NAME)
+                return dao
+        ```
+
+     4. **Create a setup fixture for initial test data**:
+
+        ```python
+        @pytest.fixture(scope="function")
+        def setup_initial_data(self, aws_mock, your_dao, other_dao):
+            """Setup test data in the mocked tables."""
+            # Add initial data using DAO methods
+            your_dao.create_item(...)
+            other_dao.create_item(...)
+        ```
+
+     5. **Create a service fixture with the DAOs**:
+
+        ```python
+        @pytest.fixture(scope="function")
+        def service(self, aws_mock, your_dao, other_dao, setup_initial_data):
+            """Create service instance with mocked DAOs."""
+            return YourService(
+                your_dao=your_dao,
+                other_dao=other_dao,
+            )
+        ```
+
+     6. **Write test methods using the service and DAOs**:
+
+        ```python
+        def test_service_method(self, aws_mock, service, your_dao):
+            """Test a service method with mocked DynamoDB."""
+            # Arrange additional test data if needed
+
+            # Act
+            result = service.your_method(...)
+
+            # Assert
+            assert result["success"] is True
+
+            # Verify data in the database using DAO methods
+            item = your_dao.get_item(...)
+            assert item["property"] == expected_value
+        ```
+
+   - **Best Practices for AWS Integration Tests**:
+
+     - Always include the aws_mock fixture in your test methods
+     - Always use DAO methods instead of direct table access
+     - Use environment variables for test table prefixes
+     - Keep test data isolated between tests
+     - Use proper cleanup after tests
+     - Test both success and error cases
+     - Verify data persistence using DAO methods
+
+   - **Common Pitfalls to Avoid**:
+
+     - Forgetting to include the aws_mock fixture
+     - Creating tables directly in test methods
+     - Hardcoding test table names
+     - Using boto3 clients/resources directly in tests
+     - Not patching table names properly
+
+   - **Example Integration Test Structure**:
+
+     ```python
+     @pytest.mark.integration
+     class TestServiceIntegration:
+         # DAO fixtures
+         @pytest.fixture
+         def first_dao(self, aws_mock, dynamodb_resource, setup_test_tables):
+             # Setup first DAO
+
+         @pytest.fixture
+         def second_dao(self, aws_mock, dynamodb_resource, setup_test_tables):
+             # Setup second DAO
+
+         # Setup data fixture
+         @pytest.fixture
+         def setup_initial_data(self, aws_mock, first_dao, second_dao):
+             # Setup initial test data
+
+         # Service fixture
+         @pytest.fixture
+         def service(self, aws_mock, first_dao, second_dao, setup_initial_data):
+             # Create service with DAOs
+
+         # Test methods
+         def test_method_one(self, aws_mock, service, first_dao):
+             # Test method one
+
+         def test_method_two(self, aws_mock, service, second_dao):
+             # Test method two
+     ```
+
+5. **Fixtures and Configuration**
 
    - Place shared fixtures in `conftest.py` files
    - Use fixture scope appropriately (function, class, module, session)
@@ -223,7 +360,7 @@ Each core component should:
              └── conftest.py   # DAO-specific fixtures
      ```
 
-5. **Test Coverage**
+6. **Test Coverage**
 
    - Aim for 80%+ coverage
    - Focus on business logic and edge cases
@@ -233,13 +370,14 @@ Each core component should:
      ```
    - Generate HTML coverage reports for detailed analysis
 
-6. **Best Practices**
+7. **Best Practices**
    - Use parameterized tests for multiple scenarios
    - Mock external dependencies appropriately
    - Follow Arrange-Act-Assert pattern
    - Keep tests focused and atomic
    - Use meaningful test data
    - Document complex test setups
+   - Cover all edge cases and error/negative scenarios as well as positive happy path scenarios
 
 ## Version Control
 

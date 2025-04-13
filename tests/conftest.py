@@ -18,8 +18,9 @@ from arcade.config.constants import (
 
 # Set test environment
 os.environ["ENV"] = "test"
-os.environ["DYNAMODB_TABLE_PREFIX"] = "test_"
-os.environ["AWS_DEFAULT_REGION"] = "us-east-1"
+os.environ.setdefault("USE_REAL_AWS", "false")  # Set to "true" to use real AWS services
+os.environ.setdefault("DYNAMODB_TABLE_PREFIX", "test_")
+os.environ.setdefault("AWS_DEFAULT_REGION", "us-east-1")
 
 # Add the project root to the Python path to allow imports to work correctly
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -44,35 +45,52 @@ def pytest_configure(config):
 @pytest.fixture(scope="session")
 def aws_credentials():
     """Mocked AWS Credentials for moto."""
-    os.environ["AWS_ACCESS_KEY_ID"] = "testing"
-    os.environ["AWS_SECRET_ACCESS_KEY"] = "testing"
-    os.environ["AWS_SECURITY_TOKEN"] = "testing"
-    os.environ["AWS_SESSION_TOKEN"] = "testing"
-
-
-@pytest.fixture(scope="session")
-def aws_mock(aws_credentials):
-    """Mock all AWS services."""
-    with mock_aws():
+    if os.environ.get("USE_REAL_AWS", "false").lower() == "true":
+        # Using real AWS - credentials should be set in environment
+        yield
+    else:
+        # Using moto - set mock credentials
+        os.environ["AWS_ACCESS_KEY_ID"] = "testing"
+        os.environ["AWS_SECRET_ACCESS_KEY"] = "testing"
+        os.environ["AWS_SECURITY_TOKEN"] = "testing"
+        os.environ["AWS_SESSION_TOKEN"] = "testing"
         yield
 
 
 @pytest.fixture(scope="session")
+def aws_mock(aws_credentials):
+    """Mock AWS services if not using real AWS."""
+    if os.environ.get("USE_REAL_AWS", "false").lower() == "true":
+        # Using real AWS - no mocking needed
+        yield
+    else:
+        # Using moto
+        with mock_aws():
+            yield
+
+
+@pytest.fixture(scope="session")
 def dynamodb_client(aws_mock):
-    """Create a DynamoDB client using mocked AWS."""
-    return boto3.client("dynamodb", region_name="us-east-1")
+    """Create a DynamoDB client."""
+    return boto3.client(
+        "dynamodb", region_name=os.environ.get("AWS_DEFAULT_REGION", "us-east-1")
+    )
 
 
 @pytest.fixture(scope="session")
 def dynamodb_resource(aws_mock):
-    """Create a DynamoDB resource using mocked AWS."""
-    return boto3.resource("dynamodb", region_name="us-east-1")
+    """Create a DynamoDB resource."""
+    return boto3.resource(
+        "dynamodb", region_name=os.environ.get("AWS_DEFAULT_REGION", "us-east-1")
+    )
 
 
 @pytest.fixture(scope="function")
 def setup_test_tables(dynamodb_resource):
     """Create test tables before tests and clean up after."""
-    # Create test tables
+    use_real_aws = os.environ.get("USE_REAL_AWS", "false").lower() == "true"
+
+    # Table definitions
     tables = [
         {
             "TableName": TEST_IMAGES_TABLE,
@@ -116,24 +134,26 @@ def setup_test_tables(dynamodb_resource):
             ],
             "BillingMode": "PAY_PER_REQUEST",
         },
-    ]  # Add more table definitions as needed
+    ]
 
-    # Create all tables
-    for table in tables:
-        try:
-            dynamodb_resource.create_table(**table)
-        except Exception:
-            # Table may already exist
-            pass
+    if not use_real_aws:
+        # Create tables only in moto
+        for table in tables:
+            try:
+                dynamodb_resource.create_table(**table)
+            except Exception:
+                # Table may already exist
+                pass
 
     yield
 
-    # Cleanup: Delete all test tables
-    for table in tables:
-        try:
-            dynamodb_resource.Table(table["TableName"]).delete()
-        except Exception:
-            pass
+    if not use_real_aws:
+        # Delete tables only in moto
+        for table in tables:
+            try:
+                dynamodb_resource.Table(table["TableName"]).delete()
+            except Exception:
+                pass
 
 
 @pytest.fixture(scope="session")
@@ -152,8 +172,29 @@ def client(app) -> Generator:
 
 
 @pytest.fixture(autouse=True)
-def cleanup_test_data():
+def cleanup_test_data(dynamodb_resource):
     """Cleanup test data after each test."""
     yield  # Run the test
-    # Add cleanup logic here if needed
-    # For example, clearing test database tables
+
+    # Clean up all test tables
+    tables = [
+        TEST_TEAMS_TABLE,
+        TEST_IMAGES_TABLE,
+        TEST_LEADERBOARD_TABLE,
+        TEST_ARCADE_STATE_TABLE,
+    ]
+
+    for table_name in tables:
+        table = dynamodb_resource.Table(table_name)
+        try:
+            # Get the key schema for the table
+            key_schema = table.key_schema
+            key_names = [key["AttributeName"] for key in key_schema]
+
+            # Scan and delete all items
+            items = table.scan()["Items"]
+            for item in items:
+                key = {k: item[k] for k in key_names}
+                table.delete_item(Key=key)
+        except Exception as e:
+            print(f"Error cleaning up table {table_name}: {str(e)}")
