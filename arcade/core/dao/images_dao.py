@@ -1,11 +1,16 @@
+import logging
 from datetime import datetime
 from typing import Dict, List, Optional, Set, Union
 
+import boto3
 import pytz
+from botocore.exceptions import ClientError
 
 from arcade.config.constants import MAX_VOTES_PER_TEAM, PP_IMAGES_TABLE
 from arcade.core.dao.base_ddb import DynamoDBDao
 from arcade.core.interfaces.images_dao import IImagesDao
+
+logger = logging.getLogger(__name__)
 
 
 class ImagesDao(DynamoDBDao, IImagesDao):
@@ -28,6 +33,8 @@ class ImagesDao(DynamoDBDao, IImagesDao):
         Initialize the DAO with the images table name from constants.
         """
         super().__init__(table_name=PP_IMAGES_TABLE)
+        self.dynamodb = boto3.resource("dynamodb")
+        self.table = self.dynamodb.Table(PP_IMAGES_TABLE)
 
     def add_image(self, team_name: str, image_url: str, prompt: str) -> Dict:
         """
@@ -299,3 +306,26 @@ class ImagesDao(DynamoDBDao, IImagesDao):
         """
         votes_given = self.get_votes_given_by_team(team_name)
         return max(0, MAX_VOTES_PER_TEAM - len(votes_given))
+
+    def delete_all_images(self) -> int:
+        """Delete all images from the table.
+
+        Returns:
+            Number of images deleted
+        """
+        try:
+            # Scan for all items
+            response = self.table.scan()
+            items = response.get("Items", [])
+            count = len(items)
+
+            # Delete each item
+            with self.table.batch_writer() as batch:
+                for item in items:
+                    batch.delete_item(Key={"teamName": item["teamName"]})
+
+            logger.info(f"Successfully deleted {count} images")
+            return count
+        except ClientError as e:
+            logger.error(f"Error deleting all images: {str(e)}")
+            raise

@@ -1,30 +1,88 @@
 from typing import Optional
 
-from fastapi import APIRouter, Header
+from fastapi import APIRouter, Depends, Header
 
-from arcade.api.schemas.request import SubmitRequest
+from arcade.api.schemas.request import SubmitRequest, VoteRequest
 from arcade.core.commons.logger import get_logger
+from arcade.core.dao.images_dao import ImagesDao
+from arcade.core.dao.leaderboard_dao import LeaderboardDao
+from arcade.core.dao.state_dao import StateDao
+from arcade.core.dao.teams_dao import TeamsDao
+from arcade.services.pic_perfect.main import PicPerfectService
 
 logger = get_logger(__name__)
 
 router = APIRouter(prefix="/pic-perfect", tags=["pic-perfect"])
 
 
+def get_pic_perfect_service() -> PicPerfectService:
+    """Dependency injection for PicPerfectService."""
+    return PicPerfectService(
+        images_dao=ImagesDao(),
+        state_dao=StateDao(),
+        leaderboard_dao=LeaderboardDao(),
+        teams_dao=TeamsDao(),
+    )
+
+
 @router.post("/submit")
 async def submit_pic(
-    request: SubmitRequest, team_name: Optional[str] = Header(None, alias="team-name")
+    request: SubmitRequest,
+    team_name: Optional[str] = Header(None, alias="team-name"),
+    service: PicPerfectService = Depends(get_pic_perfect_service),
 ):
-    logger.info(f"Received request: {request}")
-    logger.info(f"Team name: {team_name}")
+    """Submit a team's generated image."""
+    if not team_name:
+        return {"status": "error", "message": "Team name is required"}
 
-    # Mock response for now
-    return {
-        "status": "success",
-        "message": "Image submitted successfully",
-        "team_name": team_name,
-        "data": {
-            "image_url": request.image_url,
-            "prompt": request.prompt,
-            "score": 85,  # Mock score
-        },
-    }
+    result = service.submit_team_image(team_name, request.image_url, request.prompt)
+    return result
+
+
+@router.post("/vote")
+async def cast_votes(
+    request: VoteRequest,
+    team_name: Optional[str] = Header(None, alias="team-name"),
+    service: PicPerfectService = Depends(get_pic_perfect_service),
+):
+    """Cast votes for other teams' images."""
+    if not team_name:
+        return {"status": "error", "message": "Team name is required"}
+
+    result = service.cast_votes(team_name, request.voted_teams)
+    return result
+
+
+@router.get("/voting-pool")
+async def get_voting_pool(
+    team_name: Optional[str] = Header(None, alias="team-name"),
+    service: PicPerfectService = Depends(get_pic_perfect_service),
+):
+    """Get all images available for voting."""
+    if not team_name:
+        return {"status": "error", "message": "Team name is required"}
+
+    result = service.get_voting_pool(team_name)
+    return {"status": "success", "images": result}
+
+
+@router.get("/team-status")
+async def get_team_status(
+    team_name: Optional[str] = Header(None, alias="team-name"),
+    service: PicPerfectService = Depends(get_pic_perfect_service),
+):
+    """Get a team's current submission and voting status."""
+    if not team_name:
+        return {"status": "error", "message": "Team name is required"}
+
+    result = service.get_team_status(team_name)
+    return result
+
+
+@router.get("/leaderboard")
+async def get_leaderboard(
+    service: PicPerfectService = Depends(get_pic_perfect_service),
+):
+    """Get the current leaderboard with team rankings and scores."""
+    result = service.get_leaderboard()
+    return result

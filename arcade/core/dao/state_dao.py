@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
@@ -7,7 +8,7 @@ from arcade.core.dao.base_ddb import DynamoDBDao
 from arcade.core.interfaces.state_dao import IStateDao
 from arcade.types import ChallengeState
 
-logger = get_logger("state_dao")
+logger = logging.getLogger(__name__)
 
 
 class StateDao(DynamoDBDao, IStateDao):
@@ -18,9 +19,9 @@ class StateDao(DynamoDBDao, IStateDao):
     in the arcade system using DynamoDB as the underlying storage.
     """
 
-    def __init__(self):
+    def __init__(self, table_name: str = ARCADE_STATE_TABLE):
         """Initialize the StateDao with the arcade-challenge-state table."""
-        super().__init__(ARCADE_STATE_TABLE)
+        super().__init__(table_name=table_name)
 
     def get_challenge_state(self, challenge_id: str) -> Optional[Dict[str, Any]]:
         """
@@ -228,3 +229,20 @@ class StateDao(DynamoDBDao, IStateDao):
         """
         logger.info("Getting all challenges")
         return self.scan()
+
+    def delete_challenge_state(self, challenge_id: str) -> bool:
+        """Delete the state for a specific challenge.
+
+        Args:
+            challenge_id: Identifier for the challenge
+
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            self.delete_item({"challengeId": challenge_id})
+            logger.info(f"Successfully deleted state for challenge {challenge_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Error deleting challenge state for {challenge_id}: {str(e)}")
+            return False

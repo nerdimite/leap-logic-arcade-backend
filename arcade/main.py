@@ -6,7 +6,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 
+from arcade.api.routes.admin_pic_perfect import router as pic_perfect_admin_router
 from arcade.api.routes.pic_perfect import router as pic_perfect_router
+from arcade.api.routes.teams import router as teams_router
 
 # Load environment variables
 load_dotenv()
@@ -24,6 +26,8 @@ app.add_middleware(
 
 # Include routers
 app.include_router(pic_perfect_router)
+app.include_router(pic_perfect_admin_router)
+app.include_router(teams_router)
 
 
 @app.get("/")
@@ -39,7 +43,7 @@ def dev():
     port = int(os.getenv("API_PORT", "8000"))
     reload_enabled = os.getenv("API_RELOAD", "True").lower() == "true"
 
-    uvicorn.run("logic_arcade.main:app", host=host, port=port, reload=reload_enabled)
+    uvicorn.run("arcade.main:app", host=host, port=port, reload=reload_enabled)
 
 
 def prod():

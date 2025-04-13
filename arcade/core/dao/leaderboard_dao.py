@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 from typing import Dict, List, Optional, Union
 
@@ -9,7 +10,7 @@ from arcade.core.commons.logger import get_logger
 from arcade.core.dao.base_ddb import DynamoDBDao
 from arcade.core.interfaces.leaderboard_dao import ILeaderboardDao
 
-logger = get_logger("leaderboard_dao")
+logger = logging.getLogger(__name__)
 
 
 class LeaderboardDao(DynamoDBDao, ILeaderboardDao):
@@ -27,9 +28,9 @@ class LeaderboardDao(DynamoDBDao, ILeaderboardDao):
         - votedForHidden (Boolean) - Whether the team correctly identified the hidden image
     """
 
-    def __init__(self):
-        """Initialize the DAO with the leaderboard table name from constants."""
-        super().__init__(table_name=PP_LEADERBOARD_TABLE)
+    def __init__(self, table_name: str = PP_LEADERBOARD_TABLE):
+        """Initialize the DAO with DynamoDB resource."""
+        super().__init__(table_name=table_name)
 
     def update_score(
         self,
@@ -107,42 +108,28 @@ class LeaderboardDao(DynamoDBDao, ILeaderboardDao):
         return self.get_item({"challengeId": challenge_id, "teamName": team_name})
 
     def reset_leaderboard(self, challenge_id: str) -> bool:
-        """
-        Reset the leaderboard for a specific challenge by removing all entries.
+        """Reset the leaderboard for a challenge by deleting all entries.
 
         Args:
-            challenge_id: Identifier of the challenge
+            challenge_id: Identifier for the challenge
 
         Returns:
-            Boolean indicating success or failure
+            bool: True if successful, False otherwise
         """
-        logger.info(f"Resetting leaderboard for challenge: {challenge_id}")
-
         try:
-            # Query for all entries in this challenge
-            response = self.table.query(
-                KeyConditionExpression=Key("challengeId").eq(challenge_id)
-            )
-            leaderboard_entries = response.get("Items", [])
+            # Get all items for this challenge
+            items = self.query(key_condition={"challengeId": challenge_id})
 
-            # Delete each entry
-            success = True
-            for entry in leaderboard_entries:
-                team_name = entry.get("teamName")
-                if team_name:
-                    delete_success = self.delete_item(
-                        {"challengeId": challenge_id, "teamName": team_name}
-                    )
-                    if not delete_success:
-                        logger.error(
-                            f"Failed to delete team: {team_name} from challenge: {challenge_id} leaderboard"
-                        )
-                        success = False
+            # Delete each item
+            for item in items:
+                self.delete_item(
+                    {"challengeId": challenge_id, "teamName": item["teamName"]}
+                )
 
-            return success
+            logger.info(f"Successfully reset leaderboard for challenge {challenge_id}")
+            return True
         except Exception as e:
             logger.error(
-                f"Error resetting leaderboard for challenge {challenge_id}: {e}",
-                exc_info=True,
+                f"Error resetting leaderboard for challenge {challenge_id}: {str(e)}"
             )
             return False
