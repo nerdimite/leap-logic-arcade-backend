@@ -1,0 +1,12 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# Your rule content
+
+- Broader project context is always available at [requirements.md](mdc:docs/requirements.md)
+- Implementation should adhere to the [design.md](mdc:docs/design.md) and [style_guide.md](mdc:docs/style_guide.md). If during implementation you notice some inconsistency in the design doc, you can bring that up to the user and ask for edits to the design doc. If the user approves, make changes to the design doc and await approval to continue with the implementation as per this update design doc.
+- Use [memory.md](mdc:docs/memory.md) to log your changes at the end of every change automatically. This is your running memory which you can use at every new conversation to get the context of what was done previously. You can selectively use some of the last N logs which are relevant to better manage your context window. Use the format defined in the memory doc to incrementally write logs (no need of timestamp).
+- Always read [design.md](mdc:docs/design.md), [style_guide.md](mdc:docs/style_guide.md), and current [memory.md](mdc:docs/memory.md) before implementing anything
