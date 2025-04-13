@@ -2,7 +2,7 @@ import logging
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from arcade.config.constants import PP_LEADERBOARD_TABLE
+from arcade.config.constants import MAX_VOTES_PER_TEAM
 from arcade.core.dao.images_dao import ImagesDao
 from arcade.core.dao.leaderboard_dao import LeaderboardDao
 from arcade.core.dao.state_dao import StateDao
@@ -359,7 +359,7 @@ class PicPerfectAdminService:
 
         for team_name in participating_teams:
             remaining_votes = self.images_dao.get_votes_remaining(team_name)
-            if remaining_votes == 0:
+            if remaining_votes < MAX_VOTES_PER_TEAM:
                 teams_completed_voting.append(team_name)
             else:
                 teams_pending_voting.append(team_name)

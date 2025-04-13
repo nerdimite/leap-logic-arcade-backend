@@ -118,7 +118,7 @@ class LeaderboardDao(DynamoDBDao, ILeaderboardDao):
         """
         try:
             # Get all items for this challenge
-            items = self.query(key_condition={"challengeId": challenge_id})
+            items = self.scan(filter_expression=Key("challengeId").eq(challenge_id))
 
             # Delete each item
             for item in items:

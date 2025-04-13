@@ -2,8 +2,10 @@ from datetime import datetime
 from typing import Dict, List, Optional, Set
 
 import pytz
+from boto3.dynamodb.conditions import Attr
 
 from arcade.config.constants import TEAMS_TABLE
+from arcade.core.commons.utils import hash_team_name
 from arcade.core.dao.base_ddb import DynamoDBDao
 from arcade.core.interfaces.teams_dao import ITeamsDao
 
@@ -51,6 +53,7 @@ class TeamsDao(DynamoDBDao, ITeamsDao):
             "teamName": team_name,
             "createdAt": current_time,
             "lastActive": current_time,
+            "hashedTeamName": hash_team_name(team_name),
             "members": members
             or set(["PLACEHOLDER"]),  # Use placeholder for empty sets
         }
@@ -69,6 +72,18 @@ class TeamsDao(DynamoDBDao, ITeamsDao):
             Dict containing team details if found, None otherwise
         """
         return self.get_item({"teamName": team_name})
+
+    def get_team_by_hash(self, hashed_team_name: str) -> Optional[str]:
+        """
+        Get team details by hashed team name.
+        """
+        results = self.scan(
+            filter_expression=Attr("hashedTeamName").eq(hashed_team_name),
+            limit=1,
+        )
+        if len(results) == 0:
+            raise ValueError("This team does not exist")
+        return results[0].get("teamName")
 
     def update_team(self, team_name: str, updates: Dict) -> bool:
         """

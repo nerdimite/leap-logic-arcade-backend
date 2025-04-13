@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 
+from arcade.api.middleware.error_handler import ErrorHandlerMiddleware
 from arcade.api.routes.admin_pic_perfect import router as pic_perfect_admin_router
 from arcade.api.routes.pic_perfect import router as pic_perfect_router
 from arcade.api.routes.teams import router as teams_router
@@ -23,6 +24,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(ErrorHandlerMiddleware)
 
 # Include routers
 app.include_router(pic_perfect_router)

@@ -2,6 +2,8 @@ from typing import List, Optional
 
 from pydantic import BaseModel
 
+from arcade.types import ChallengeState
+
 
 class TeamRegistrationRequest(BaseModel):
     """Schema for team registration request."""
@@ -26,4 +28,4 @@ class StartChallengeRequest(BaseModel):
 
 
 class TransitionStateRequest(BaseModel):
-    target_state: str
+    target_state: ChallengeState

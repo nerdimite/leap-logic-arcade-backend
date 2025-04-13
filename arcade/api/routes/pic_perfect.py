@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Header
 
 from arcade.api.schemas.request import SubmitRequest, VoteRequest
 from arcade.core.commons.logger import get_logger
+from arcade.core.commons.utils import hash_team_name, is_hashed_team_name
 from arcade.core.dao.images_dao import ImagesDao
 from arcade.core.dao.leaderboard_dao import LeaderboardDao
 from arcade.core.dao.state_dao import StateDao
@@ -49,7 +50,14 @@ async def cast_votes(
     if not team_name:
         return {"status": "error", "message": "Team name is required"}
 
-    result = service.cast_votes(team_name, request.voted_teams)
+    voted_teams = []
+    for voted_team in request.voted_teams:
+        if is_hashed_team_name(voted_team):
+            voted_teams.append(service.teams_dao.get_team_by_hash(voted_team))
+        else:
+            voted_teams.append(voted_team)
+
+    result = service.cast_votes(team_name, voted_teams)
     return result
 
 
@@ -63,7 +71,18 @@ async def get_voting_pool(
         return {"status": "error", "message": "Team name is required"}
 
     result = service.get_voting_pool(team_name)
-    return {"status": "success", "images": result}
+
+    # Convert teamName to hashedTeamName for anonymity so that end users don't know which one is the hidden image
+    voting_pool = []
+    for image in result:
+        voting_pool.append(
+            {
+                "teamName": hash_team_name(image["teamName"]),
+                "imageUrl": image["imageUrl"],
+            }
+        )
+
+    return {"status": "success", "voting_pool": voting_pool}
 
 
 @router.get("/team-status")

@@ -63,6 +63,11 @@ class PicPerfectService:
                 f"Challenge is not in submission state. Current state: {challenge_state.get('state')}"
             )
 
+        # Check if team is registered
+        team = self.teams_dao.get_team(team_name)
+        if not team:
+            raise ValueError(f"Team {team_name} is not registered")
+
         # Submit image
         try:
             result = self.images_dao.add_image(team_name, image_url, prompt)
