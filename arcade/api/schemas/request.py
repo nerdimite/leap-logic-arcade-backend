@@ -50,3 +50,9 @@ class AgentToolRequest(BaseModel):
 
     tool_name: str = Field(..., description="Name of the tool")
     description: str = Field(..., description="Description of the tool")
+
+
+class ChatMessageRequest(BaseModel):
+    """Request model for sending messages to the agent."""
+
+    message: str = Field(..., description="Message to send to the agent")

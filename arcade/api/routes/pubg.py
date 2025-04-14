@@ -1,16 +1,25 @@
-from typing import Dict, List
+from typing import Any, Dict, List
 
 from fastapi import APIRouter, Depends, Header, HTTPException
 
-from arcade.api.schemas.request import AgentStateUpdateRequest, AgentToolRequest
-from arcade.api.schemas.response import SuccessResponse
+from arcade.api.schemas.request import (
+    AgentStateUpdateRequest,
+    AgentToolRequest,
+    ChatMessageRequest,
+)
+from arcade.api.schemas.response import ChatMessageResponse, SuccessResponse
 from arcade.services.pubg.agent_service import AgentService
+from arcade.services.pubg.chat_service import ChatService
 
 router = APIRouter(prefix="/api/pubg", tags=["pubg"])
 
 
 def get_agent_service() -> AgentService:
     return AgentService()
+
+
+def get_chat_service() -> ChatService:
+    return ChatService()
 
 
 @router.get("/agent/state")
@@ -125,5 +134,49 @@ async def get_agent_tools(
     """
     try:
         return agent_service.get_agent_tools(team_name=team_name)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/agent/chat/message", response_model=ChatMessageResponse)
+async def send_chat_message(
+    request: ChatMessageRequest,
+    team_name: str = Header(..., description="Name of the team"),
+    chat_service: ChatService = Depends(get_chat_service),
+) -> ChatMessageResponse:
+    """Send a message to the AI agent.
+
+    Args:
+        request: Request containing the message
+        team_name: Team name from header
+        chat_service: Injected chat service
+
+    Returns:
+        Agent's response
+    """
+    try:
+        message = {"role": "user", "content": request.message}
+        response = await chat_service.send_message(team_name=team_name, message=message)
+        return ChatMessageResponse(response=response)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/agent/chat/history")
+async def get_chat_history(
+    team_name: str = Header(..., description="Name of the team"),
+    chat_service: ChatService = Depends(get_chat_service),
+) -> List[Dict[str, Any]]:
+    """Get the chat history for a team.
+
+    Args:
+        team_name: Team name from header
+        chat_service: Injected chat service
+
+    Returns:
+        List of chat messages
+    """
+    try:
+        return await chat_service.get_chat_history(team_name=team_name)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

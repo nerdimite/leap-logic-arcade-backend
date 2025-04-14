@@ -15,3 +15,5 @@ MAX_VOTES_PER_TEAM = 3
 # === PUBG ===
 # DynamoDB Tables
 PUBG_AGENTS_TABLE = "pubg-agents"
+
+DEFAULT_MODEL = "gpt-4o-mini"

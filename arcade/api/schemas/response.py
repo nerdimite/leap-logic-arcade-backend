@@ -18,3 +18,9 @@ class CleanAgentsResponse(BaseModel):
     errors: Optional[List[str]] = Field(
         None, description="List of errors if any occurred"
     )
+
+
+class ChatMessageResponse(BaseModel):
+    """Response model for agent chat messages."""
+    
+    response: str = Field(..., description="Response from the agent")
