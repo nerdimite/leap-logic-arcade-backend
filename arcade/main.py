@@ -7,9 +7,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 
 from arcade.api.middleware.error_handler import ErrorHandlerMiddleware
-from arcade.api.routes.admin_pic_perfect import router as pic_perfect_admin_router
-from arcade.api.routes.pic_perfect import router as pic_perfect_router
-from arcade.api.routes.teams import router as teams_router
+from arcade.api.routes import (
+    pic_perfect_admin_router,
+    pic_perfect_router,
+    pubg_admin_router,
+    pubg_router,
+    teams_router,
+)
 
 # Load environment variables
 load_dotenv()
@@ -27,9 +31,11 @@ app.add_middleware(
 app.add_middleware(ErrorHandlerMiddleware)
 
 # Include routers
+app.include_router(teams_router)
 app.include_router(pic_perfect_router)
 app.include_router(pic_perfect_admin_router)
-app.include_router(teams_router)
+app.include_router(pubg_router)
+app.include_router(pubg_admin_router)
 
 
 @app.get("/")

@@ -10,6 +10,8 @@ from typing import Dict, List, Optional
 import boto3
 from botocore.exceptions import BotoCoreError, ClientError
 
+from arcade.core.commons.logger import get_logger
+
 # Add the project root to the Python path to allow imports to work correctly
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -17,14 +19,11 @@ from arcade.config.constants import (
     ARCADE_STATE_TABLE,
     PP_IMAGES_TABLE,
     PP_LEADERBOARD_TABLE,
+    PUBG_AGENTS_TABLE,
     TEAMS_TABLE,
 )
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def get_table_definitions() -> List[Dict]:
@@ -84,6 +83,20 @@ def get_table_definitions() -> List[Dict]:
             ],
             "AttributeDefinitions": [
                 {"AttributeName": "challengeId", "AttributeType": "S"},
+                {"AttributeName": "teamName", "AttributeType": "S"},
+            ],
+            "BillingMode": "PAY_PER_REQUEST",
+            "Tags": [
+                {"Key": "Environment", "Value": "Production"},
+                {"Key": "Application", "Value": "Arcade"},
+            ],
+        },
+        {
+            "TableName": PUBG_AGENTS_TABLE,
+            "KeySchema": [
+                {"AttributeName": "teamName", "KeyType": "HASH"},
+            ],
+            "AttributeDefinitions": [
                 {"AttributeName": "teamName", "AttributeType": "S"},
             ],
             "BillingMode": "PAY_PER_REQUEST",
