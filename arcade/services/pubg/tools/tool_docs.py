@@ -1,4 +1,6 @@
+import asyncio
 import re
+import sqlite3
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -83,21 +85,9 @@ async def force_system_login(override_code: str) -> bool:
 
     return {
         "success": normalized_override_code == normalized_real_override_code,
-        "message": "Login successful" if normalized_override_code == normalized_real_override_code else "Login failed",
+        "message": (
+            "Login successful"
+            if normalized_override_code == normalized_real_override_code
+            else "Login failed"
+        ),
     }
-
-
-async def system_database(sql_query: str):
-    pass
-
-
-async def power_system(command: str, payload: Dict[str, Any]):
-    pass
-
-
-async def navigation_system(command: str, payload: Dict[str, Any]):
-    pass
-
-
-async def propulsion_system(command: str, payload: Dict[str, Any]):
-    pass

@@ -1,0 +1,18 @@
+[
+  {
+    "name": "Proxima Station",
+    "coordinates": [127, 38, 95, 4]
+  },
+  {
+    "name": "Safe Void Space",
+    "coordinates": [0, 0]
+  },
+  {
+    "name": "Outpost 37",
+    "coordinates": [182, 44, 21, 8]
+  },
+  {
+    "name": "Starbase 12",
+    "coordinates": [91, 22, 76, 3]
+  }
+]
