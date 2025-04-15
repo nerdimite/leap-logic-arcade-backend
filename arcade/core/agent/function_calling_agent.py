@@ -3,12 +3,8 @@ from typing import Any, Callable, Dict, List, Optional
 
 import openai
 from openai import AsyncOpenAI
-from tenacity import (
-    retry,
-    retry_if_exception_type,
-    stop_after_attempt,
-    wait_exponential,
-)
+from tenacity import (retry, retry_if_exception_type, stop_after_attempt,
+                      wait_exponential)
 
 from arcade.core.commons.logger import get_logger
 
@@ -73,12 +69,14 @@ class FunctionCallingAgent:
             name = tool_call.name
             args = json.loads(tool_call.arguments)
 
+            logger.info(f'Calling function "{name}" with args {args}')
+
             result = (
                 await self.callback_function(name, args)
                 if callable(self.callback_function)
                 else None
             )
-            logger.info(f"Function {name} called with args {args} and result {result}")
+            logger.info(f'Function Call "{name}" Result: {result}')
 
             tool_results.append(
                 {
@@ -136,7 +134,10 @@ class FunctionCallingAgent:
             tool_calls_remaining -= 1
         else:
             logger.error(f"Exceeded max tool calls: {self.max_tool_calls}")
-            return None, "Sorry, I exceeded the maximum number of tool calls I could make. Please try again."
+            return (
+                None,
+                "Sorry, I exceeded the maximum number of tool calls I could make. Please try again.",
+            )
 
         self.last_response_id = response.id
 

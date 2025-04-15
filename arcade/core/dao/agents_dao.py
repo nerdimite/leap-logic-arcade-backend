@@ -63,7 +63,7 @@ class AgentsDao(DynamoDBDao, IAgentsDao):
             raise
 
     def add_agent_tool(self, team_name: str, tool: Dict[str, str]) -> None:
-        """Add a new tool to the agent's toolset."""
+        """Add/update a tool to the agent's toolset."""
         try:
             # Get current tools
             current_tools = self.get_agent_tools(team_name)
@@ -72,6 +72,19 @@ class AgentsDao(DynamoDBDao, IAgentsDao):
             tool_exists = any(t.get("name") == tool.get("name") for t in current_tools)
             if not tool_exists:
                 current_tools.append(tool)
+                self.update_item(
+                    key={"teamName": team_name}, updates={"tools": current_tools}
+                )
+            if tool_exists:
+                # Update the tool
+                existing_tool_index = next(
+                    (
+                        i
+                        for i, t in enumerate(current_tools)
+                        if t.get("name") == tool.get("name")
+                    ),
+                )
+                current_tools[existing_tool_index] = tool
                 self.update_item(
                     key={"teamName": team_name}, updates={"tools": current_tools}
                 )

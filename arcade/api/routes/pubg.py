@@ -122,7 +122,7 @@ async def delete_agent_tool(
 async def get_agent_tools(
     team_name: str = Header(..., description="Name of the team"),
     agent_service: AgentService = Depends(get_agent_service),
-) -> List[Dict[str, str]]:
+) -> List[Dict[str, Any]]:
     """Get all tools available for an agent.
 
     Args:
@@ -134,6 +134,24 @@ async def get_agent_tools(
     """
     try:
         return agent_service.get_agent_tools(team_name=team_name)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/agent/available-tools")
+async def get_available_tools(
+    agent_service: AgentService = Depends(get_agent_service),
+) -> List[Dict[str, Any]]:
+    """Get all available tools that can be added to agents.
+
+    Args:
+        agent_service: Injected agent service
+
+    Returns:
+        List of all available tool configurations
+    """
+    try:
+        return agent_service.get_available_tools()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

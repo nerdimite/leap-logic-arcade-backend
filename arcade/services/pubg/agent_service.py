@@ -1,6 +1,7 @@
 from typing import Dict, List, Optional
 
 from arcade.core.dao.agents_dao import AgentsDao
+from arcade.services.pubg.tools import TOOLS
 
 
 class AgentService:
@@ -42,8 +43,14 @@ class AgentService:
             tool_name: Name of the tool to add
             description: Description of the tool
         """
-        tool = {"name": tool_name, "description": description}
-        # TODO add the schema from existing tools here
+        # search for the tool in TOOLS
+        tool = next((_tool for _tool in TOOLS if _tool["name"] == tool_name), None)
+        if tool is None:
+            raise ValueError(f"Tool {tool_name} not found in TOOLS")
+
+        tool["description"] = description
+        tool["parameters"]["description"] = description
+
         self.agents_dao.add_agent_tool(team_name=team_name, tool=tool)
 
     def delete_agent_tool(self, team_name: str, tool_name: str) -> None:
@@ -76,3 +83,11 @@ class AgentService:
             List of tool configurations
         """
         return self.agents_dao.get_agent_tools(team_name=team_name)
+
+    def get_available_tools(self) -> List[Dict[str, str]]:
+        """Get the list of available tools.
+
+        Returns:
+            List of tool configurations
+        """
+        return TOOLS
