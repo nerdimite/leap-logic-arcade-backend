@@ -24,7 +24,12 @@ class AgentsDao(DynamoDBDao, IAgentsDao):
         """Get the agent state for a given team."""
         try:
             response = self.get_item({"teamName": team_name})
-            return response if response else {}
+            if response:
+                if not response.get("tools"):
+                    response["tools"] = []
+                return response
+            else:
+                return {}
         except ClientError as e:
             logger.error(f"Error getting agent state for team {team_name}: {str(e)}")
             raise

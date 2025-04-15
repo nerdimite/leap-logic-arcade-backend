@@ -3,12 +3,8 @@ from typing import Any, Callable, Dict, List, Optional
 
 import openai
 from openai import AsyncOpenAI
-from tenacity import (
-    retry,
-    retry_if_exception_type,
-    stop_after_attempt,
-    wait_exponential,
-)
+from tenacity import (retry, retry_if_exception_type, stop_after_attempt,
+                      wait_exponential)
 
 from arcade.core.commons.logger import get_logger
 
@@ -32,7 +28,7 @@ class FunctionCallingAgent:
         tools: Optional[List[Dict[str, Any]]] = None,
         instructions: Optional[str] = None,
         previous_response_id: Optional[str] = None,
-        max_tool_calls: int = 2,
+        max_tool_calls: int = 6,
     ):
         """Initialize the function calling agent.
 
@@ -131,6 +127,7 @@ class FunctionCallingAgent:
         while tool_calls_remaining > 0:
             response = await self.client.responses.create(input=messages, **params)
             messages.extend(response.output)
+            logger.info(f"Response: {response}")
 
             if not response.output or response.output[0].type != "function_call":
                 break

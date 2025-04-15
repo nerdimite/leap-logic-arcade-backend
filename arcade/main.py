@@ -51,7 +51,13 @@ def dev():
     port = int(os.getenv("API_PORT", "8000"))
     reload_enabled = os.getenv("API_RELOAD", "True").lower() == "true"
 
-    uvicorn.run("arcade.main:app", host=host, port=port, reload=reload_enabled)
+    uvicorn.run(
+        "arcade.main:app",
+        host=host,
+        port=port,
+        reload=reload_enabled,
+        log_level="debug",
+    )
 
 
 def prod():
@@ -79,6 +85,8 @@ def prod():
         "bind": f"{host}:{port}",
         "workers": workers,
         "worker_class": "uvicorn.workers.UvicornWorker",
+        "loglevel": os.getenv("LOG_LEVEL", "debug").lower(),
+        "timeout": int(os.getenv("WORKER_TIMEOUT", "600")),
     }
 
     StandaloneApplication(app, options).run()

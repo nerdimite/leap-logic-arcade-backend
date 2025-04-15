@@ -109,6 +109,7 @@ class ChatService:
 
         # Create temporary agent just to access history
         agent = FunctionCallingAgent(
+            team_name=team_name,
             callback_function=self.callback_function,
         )
 

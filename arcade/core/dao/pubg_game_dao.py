@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Dict, Optional
 
 import pytz
+from dynamodb_json import json_util
 
 from arcade.config.constants import DEFAULT_POWER_DISTRIBUTION, PUBG_GAME_STATE_TABLE
 from arcade.core.commons.logger import get_logger

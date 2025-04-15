@@ -215,7 +215,11 @@ class DynamoDBDao(IDynamoDBDao):
         """
         try:
             response = self.table.get_item(Key=key)
-            return response.get("Item")
+            try:
+                return json_util.loads(response.get("Item"))
+            except Exception as e:
+                logger.error(f"Error parsing item with key {key}: {e}", exc_info=True)
+                return response.get("Item")
         except (BotoCoreError, ClientError) as e:
             logger.error(f"Error fetching item with key {key}: {e}", exc_info=True)
             return None
