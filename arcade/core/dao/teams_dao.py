@@ -120,7 +120,7 @@ class TeamsDao(DynamoDBDao, ITeamsDao):
         Returns:
             List of team details
         """
-        return self.scan(limit=100)  # Assuming we won't have more than 100 teams
+        return self.scan(limit=1000)  # Assuming we won't have more than 100 teams
 
     def get_team_count(self) -> int:
         """

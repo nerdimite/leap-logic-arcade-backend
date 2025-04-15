@@ -292,7 +292,7 @@ class DynamoDBDao(IDynamoDBDao):
         self,
         filter_expression: Optional[str] = None,
         expression_values: Optional[Dict[str, Any]] = None,
-        limit: int = 10,
+        limit: int = 1000,
     ) -> List[Dict[str, Any]]:
         """
         Scans the entire table, optionally filtering results.
@@ -306,7 +306,7 @@ class DynamoDBDao(IDynamoDBDao):
                 Note: You may need to provide ExpressionAttributeValues separately.
             expression_values: Optional dictionary mapping placeholder names to values for the filter expression.
                 Example: {":no_action": "NO_ACTION_NECESSARY"}
-            limit: Maximum number of items to return (default: 10)
+            limit: Maximum number of items to return (default: 1000)
 
         Returns:
             List of items matching the filter criteria, or empty list if error occurs

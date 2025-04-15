@@ -240,7 +240,7 @@ class ImagesDao(DynamoDBDao, IImagesDao):
             exclude_teams = [exclude_teams]
 
         # Scan for all images
-        all_images = self.scan(limit=100)  # Assuming we won't have more than 100 teams
+        all_images = self.scan(limit=1000)  # Assuming we won't have more than 100 teams
 
         # Filter out excluded teams
         filtered_images = [
