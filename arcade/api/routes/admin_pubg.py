@@ -41,7 +41,7 @@ async def initialize_team_agent(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/initialize-all")
+@router.post("/start")
 async def initialize_all_teams(
     admin_service: AdminService = Depends(get_admin_agent_service),
 ) -> Dict[str, str]:
@@ -54,7 +54,7 @@ async def initialize_all_teams(
         Dict mapping team names to initialization status
     """
     try:
-        return admin_service.initialize_all_teams()
+        return admin_service.initialize_challenge()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

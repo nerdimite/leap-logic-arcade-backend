@@ -2,11 +2,8 @@ from typing import Any, Dict, List
 
 from fastapi import APIRouter, Depends, Header, HTTPException
 
-from arcade.api.schemas.request import (
-    AgentStateUpdateRequest,
-    AgentToolRequest,
-    ChatMessageRequest,
-)
+from arcade.api.schemas.request import (AgentStateUpdateRequest,
+                                        AgentToolRequest, ChatMessageRequest)
 from arcade.api.schemas.response import ChatMessageResponse, SuccessResponse
 from arcade.core.dao import PubgGameDao
 from arcade.services.pubg.admin_service import AdminService
@@ -250,5 +247,21 @@ async def get_chat_history(
     """
     try:
         return await chat_service.get_chat_history(team_name=team_name)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/challenge-status")
+async def get_challenge_status(
+    admin_service: AdminService = Depends(get_admin_service),
+) -> Dict[str, Any]:
+    """Get the current state of the PUBG challenge.
+
+    Returns:
+        Dict containing 'status' (current state of the challenge)
+    """
+    try:
+        return admin_service.state_dao.get_challenge_state(
+            admin_service.CHALLENGE_ID
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

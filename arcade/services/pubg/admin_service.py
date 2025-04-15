@@ -6,18 +6,21 @@ from arcade.config.constants import (
     DEFAULT_TEMPERATURE,
     DEFAULT_TOOLS,
 )
-from arcade.core.dao import PubgGameDao, TeamsDao
+from arcade.core.dao import PubgGameDao, StateDao, TeamsDao
 from arcade.services.pubg.agent_service import AgentService
 
 
 class AdminService:
     """Service for admin operations on PUBG."""
 
+    CHALLENGE_ID = "pubg-challenge"
+
     def __init__(self):
         """Initialize the admin service with required DAOs and services."""
         self.teams_dao = TeamsDao()
         self.agent_service = AgentService()
         self.pubg_game_dao = PubgGameDao()
+        self.state_dao = StateDao()
 
     def initialize_team_agent(self, team_name: str) -> None:
         """Initialize an agent for a newly registered team with default configuration.
@@ -48,14 +51,21 @@ class AdminService:
                 description=tool["description"],
             )
 
-    def initialize_all_teams(self) -> Dict[str, str]:
+    def initialize_challenge(self) -> Dict[str, str]:
         """Initialize agents and game states for all registered teams that don't have them.
 
         Returns:
             Dict mapping team names to initialization status ("success" or error message)
         """
         results = {}
-        teams = self.teams_dao.get_all_teams()
+        teams = [
+            team
+            for team in self.teams_dao.get_all_teams()
+            if team["teamName"] != "HIDDEN_IMAGE"
+        ]
+        challenge_state = self.state_dao.get_challenge_state(self.CHALLENGE_ID)
+        if not challenge_state:
+            self.state_dao.initialize_challenge(self.CHALLENGE_ID)
 
         for team in teams:
             team_name = team["teamName"]
@@ -147,7 +157,11 @@ class AdminService:
             List of team names without initialized agents or game states
         """
         uninitialized = []
-        teams = self.teams_dao.get_all_teams()
+        teams = [
+            team
+            for team in self.teams_dao.get_all_teams()
+            if team["teamName"] != "HIDDEN_IMAGE"
+        ]
 
         for team in teams:
             team_name = team["teamName"]
@@ -172,10 +186,17 @@ class AdminService:
         Returns:
             Dict containing operation status and count of agents/game states cleaned
         """
-        teams = self.teams_dao.get_all_teams()
+        teams = [
+            team
+            for team in self.teams_dao.get_all_teams()
+            if team["teamName"] != "HIDDEN_IMAGE"
+        ]
+
         cleaned_agents_count = 0
         cleaned_game_states_count = 0
         errors = []
+
+        self.state_dao.lock_challenge(self.CHALLENGE_ID)
 
         for team in teams:
             team_name = team["teamName"]
@@ -214,7 +235,11 @@ class AdminService:
             Dict mapping team names to reset status
         """
         results = {}
-        teams = self.teams_dao.get_all_teams()
+        teams = [
+            team
+            for team in self.teams_dao.get_all_teams()
+            if team["teamName"] != "HIDDEN_IMAGE"
+        ]
 
         for team in teams:
             team_name = team["teamName"]
@@ -238,7 +263,11 @@ class AdminService:
             Dict mapping team names to leaderboard position
         """
         # Get all teams who have completed the mission and sort them by completion time
-        teams = self.teams_dao.get_all_teams()
+        teams = [
+            team
+            for team in self.teams_dao.get_all_teams()
+            if team["teamName"] != "HIDDEN_IMAGE"
+        ]
         completed_teams = []
         pending_teams = []
         for team in teams:
