@@ -3,8 +3,12 @@ from typing import Any, Callable, Dict, List, Optional
 
 import openai
 from openai import AsyncOpenAI
-from tenacity import (retry, retry_if_exception_type, stop_after_attempt,
-                      wait_exponential)
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 from arcade.core.commons.logger import get_logger
 
@@ -21,6 +25,7 @@ class FunctionCallingAgent:
 
     def __init__(
         self,
+        team_name: str,
         callback_function: Callable,
         model: str = "gpt-4o-mini",
         temperature: float = 1.0,
@@ -32,6 +37,7 @@ class FunctionCallingAgent:
         """Initialize the function calling agent.
 
         Args:
+            team_name: The name of the team
             model: The OpenAI model to use
             temperature: Sampling temperature
             tools: List of tools/functions available to the agent
@@ -41,6 +47,7 @@ class FunctionCallingAgent:
             callback_function: Callback function to handle tool execution. Make sure it is async and returns a string.
         """
         self.client = AsyncOpenAI()
+        self.team_name = team_name
 
         self.model = model
         self.temperature = temperature
@@ -72,7 +79,7 @@ class FunctionCallingAgent:
             logger.info(f'Calling function "{name}" with args {args}')
 
             result = (
-                await self.callback_function(name, args)
+                await self.callback_function(name, args, self.team_name)
                 if callable(self.callback_function)
                 else None
             )

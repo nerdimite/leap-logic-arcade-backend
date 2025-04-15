@@ -20,6 +20,7 @@ from arcade.config.constants import (
     PP_IMAGES_TABLE,
     PP_LEADERBOARD_TABLE,
     PUBG_AGENTS_TABLE,
+    PUBG_GAME_STATE_TABLE,
     TEAMS_TABLE,
 )
 
@@ -93,6 +94,20 @@ def get_table_definitions() -> List[Dict]:
         },
         {
             "TableName": PUBG_AGENTS_TABLE,
+            "KeySchema": [
+                {"AttributeName": "teamName", "KeyType": "HASH"},
+            ],
+            "AttributeDefinitions": [
+                {"AttributeName": "teamName", "AttributeType": "S"},
+            ],
+            "BillingMode": "PAY_PER_REQUEST",
+            "Tags": [
+                {"Key": "Environment", "Value": "Production"},
+                {"Key": "Application", "Value": "Arcade"},
+            ],
+        },
+        {
+            "TableName": PUBG_GAME_STATE_TABLE,
             "KeySchema": [
                 {"AttributeName": "teamName", "KeyType": "HASH"},
             ],
@@ -183,6 +198,8 @@ def delete_tables(region: str = "us-east-1", wait: bool = True) -> Dict[str, Lis
         TEAMS_TABLE,
         ARCADE_STATE_TABLE,
         PP_LEADERBOARD_TABLE,
+        PUBG_AGENTS_TABLE,
+        PUBG_GAME_STATE_TABLE,
     ]
 
     deleted_tables = []
@@ -245,6 +262,8 @@ def verify_tables(region: str = "us-east-1") -> Dict[str, List[str]]:
         TEAMS_TABLE,
         ARCADE_STATE_TABLE,
         PP_LEADERBOARD_TABLE,
+        PUBG_AGENTS_TABLE,
+        PUBG_GAME_STATE_TABLE,
     ]
 
     existing_tables = []

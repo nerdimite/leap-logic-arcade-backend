@@ -6,7 +6,7 @@ CURRENT_DIR = Path(__file__).parent
 DATA_DIR = CURRENT_DIR / "data"
 
 
-async def system_database(sql_query: str):
+async def system_database(sql_query: str, **kwargs):
     """Execute SQL query on the ship database and return the results.
 
     Args:

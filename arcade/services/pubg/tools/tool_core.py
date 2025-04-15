@@ -1,16 +1,15 @@
-import asyncio
 import re
-import sqlite3
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Optional
 
 from arcade.config.constants import OVERRIDE_CODE
+from arcade.core.dao import PubgGameDao
 
 CURRENT_DIR = Path(__file__).parent
 DATA_DIR = CURRENT_DIR / "data"
 
 
-async def get_crew_logs() -> str:
+async def get_crew_logs(**kwargs) -> str:
     """Get the crew logs.
 
     Returns:
@@ -20,7 +19,7 @@ async def get_crew_logs() -> str:
         return f.read()
 
 
-async def get_ship_docs(section_num: Optional[int] = None) -> str:
+async def get_ship_docs(section_num: Optional[int] = None, **kwargs) -> str:
     """Get the ship docs.
 
     Args:
@@ -69,7 +68,7 @@ async def get_ship_docs(section_num: Optional[int] = None) -> str:
     return h2_sections[section_num - 1]
 
 
-async def force_system_login(override_code: str) -> bool:
+async def force_system_login(override_code: str, **kwargs) -> bool:
     """Force a system login using an override code.
 
     Args:
@@ -81,7 +80,10 @@ async def force_system_login(override_code: str) -> bool:
     normalized_override_code = re.sub(r"[^a-z0-9]", "", override_code.lower())
     normalized_real_override_code = re.sub(r"[^a-z0-9]", "", OVERRIDE_CODE.lower())
 
-    # TODO set game state to logged in
+    pubg_game_dao = PubgGameDao()
+    team_name = kwargs["team_name"]
+
+    pubg_game_dao.set_system_access(team_name, True)
 
     return {
         "success": normalized_override_code == normalized_real_override_code,

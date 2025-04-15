@@ -8,6 +8,8 @@ from arcade.api.schemas.request import (
     ChatMessageRequest,
 )
 from arcade.api.schemas.response import ChatMessageResponse, SuccessResponse
+from arcade.core.dao import PubgGameDao
+from arcade.services.pubg.admin_service import AdminService
 from arcade.services.pubg.agent_service import AgentService
 from arcade.services.pubg.chat_service import ChatService
 
@@ -20,6 +22,14 @@ def get_agent_service() -> AgentService:
 
 def get_chat_service() -> ChatService:
     return ChatService()
+
+
+def get_pubg_game_dao() -> PubgGameDao:
+    return PubgGameDao()
+
+
+def get_admin_service() -> AdminService:
+    return AdminService()
 
 
 @router.get("/agent/state")
@@ -38,6 +48,50 @@ async def get_agent_state(
     """
     try:
         return agent_service.get_agent_state(team_name=team_name)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/game-state")
+async def get_game_state(
+    team_name: str = Header(..., description="Name of the team"),
+    game_dao: PubgGameDao = Depends(get_pubg_game_dao),
+) -> Dict:
+    """Get the current game state for a team.
+
+    Args:
+        team_name: Team name from header
+        game_dao: Injected game DAO
+
+    Returns:
+        Current game state including system access, power distribution, and mission status
+    """
+    try:
+        game_state = game_dao.get_team_game_state(team_name=team_name)
+        if not game_state:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Game state not found for team {team_name}. The team may need to be initialized.",
+            )
+        return game_state
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/leaderboard")
+async def get_leaderboard(
+    admin_service: AdminService = Depends(get_admin_service),
+) -> Dict[str, Any]:
+    """Get the leaderboard for all teams.
+
+    Returns:
+        Dict containing 'leaderboard' (list of completed teams sorted by completion time)
+        and 'pending_teams' (list of teams that haven't completed the mission)
+    """
+    try:
+        return admin_service.get_leaderboard()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

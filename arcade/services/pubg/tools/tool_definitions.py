@@ -63,10 +63,10 @@ class GetRegionMapArgs(BaseModel):
     model_config = ConfigDict(title="get_region_map")
 
 
-class GetCurrentCoordinatesArgs(BaseModel):
-    """Get the current coordinates."""
+class GetCurrentPositionArgs(BaseModel):
+    """Get the current position and velocity of the ship."""
 
-    model_config = ConfigDict(title="get_current_coordinates")
+    model_config = ConfigDict(title="get_current_position")
 
 
 class DavinciCoderArgs(BaseModel):
@@ -92,6 +92,29 @@ class DavinciCoderArgs(BaseModel):
     model_config = ConfigDict(title="davinci_coder")
 
 
+class SetNavigationCourseArgs(BaseModel):
+    """Set the course for the ship to navigate to the target coordinates."""
+
+    target_coordinates: List[int]
+
+    model_config = ConfigDict(title="set_navigation_course")
+
+
+class SetEngineThrustArgs(BaseModel):
+    """Set the thrust for the ship to navigate to the target coordinates."""
+
+    thrust: float
+    thrust_direction: List[int]
+
+    model_config = ConfigDict(title="set_engine_thrust")
+
+
+class StartEnginesArgs(BaseModel):
+    """Start the engines and bon voyage."""
+
+    model_config = ConfigDict(title="start_engines")
+
+
 TOOLS = [
     generate_function_schema(GetCrewLogsArgs),
     generate_function_schema(GetShipDocsArgs),
@@ -100,6 +123,9 @@ TOOLS = [
     generate_function_schema(UpdatePowerDistributionArgs),
     generate_function_schema(GetCurrentPowerDistributionArgs),
     generate_function_schema(GetRegionMapArgs),
-    generate_function_schema(GetCurrentCoordinatesArgs),
+    generate_function_schema(GetCurrentPositionArgs),
     generate_function_schema(DavinciCoderArgs),
+    generate_function_schema(SetNavigationCourseArgs),
+    generate_function_schema(SetEngineThrustArgs),
+    generate_function_schema(StartEnginesArgs),
 ]

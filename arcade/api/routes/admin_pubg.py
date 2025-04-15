@@ -3,19 +3,23 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from arcade.api.schemas.response import CleanAgentsResponse, SuccessResponse
-from arcade.services.pubg.admin_agent_service import AdminAgentService
+from arcade.api.schemas.response import (
+    CleanAgentsResponse,
+    CleanTeamDataResponse,
+    SuccessResponse,
+)
+from arcade.services.pubg.admin_service import AdminService
 
 router = APIRouter(prefix="/api/admin/pubg", tags=["pubg-admin"])
 
 
-def get_admin_agent_service() -> AdminAgentService:
-    return AdminAgentService()
+def get_admin_agent_service() -> AdminService:
+    return AdminService()
 
 
 @router.post("/agent/initialize/{team_name}")
 async def initialize_team_agent(
-    team_name: str, admin_service: AdminAgentService = Depends(get_admin_agent_service)
+    team_name: str, admin_service: AdminService = Depends(get_admin_agent_service)
 ) -> SuccessResponse:
     """Initialize an agent for a specific team with default configuration.
 
@@ -37,11 +41,11 @@ async def initialize_team_agent(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/agent/initialize-all")
+@router.post("/initialize-all")
 async def initialize_all_teams(
-    admin_service: AdminAgentService = Depends(get_admin_agent_service),
+    admin_service: AdminService = Depends(get_admin_agent_service),
 ) -> Dict[str, str]:
-    """Initialize agents for all teams that don't have agents yet.
+    """Initialize agents and game states for all teams that don't have them yet.
 
     Args:
         admin_service: Injected admin service
@@ -57,7 +61,7 @@ async def initialize_all_teams(
 
 @router.post("/agent/reset/{team_name}")
 async def reset_team_agent(
-    team_name: str, admin_service: AdminAgentService = Depends(get_admin_agent_service)
+    team_name: str, admin_service: AdminService = Depends(get_admin_agent_service)
 ) -> SuccessResponse:
     """Reset an agent to default configuration.
 
@@ -77,17 +81,59 @@ async def reset_team_agent(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/agent/uninitialized")
-async def get_uninitialized_teams(
-    admin_service: AdminAgentService = Depends(get_admin_agent_service),
-) -> List[str]:
-    """Get list of teams that don't have initialized agents.
+@router.post("/game-state/reset/{team_name}")
+async def reset_team_game_state(
+    team_name: str, admin_service: AdminService = Depends(get_admin_agent_service)
+) -> SuccessResponse:
+    """Reset a team's game state to initial values.
+
+    Args:
+        team_name: Name of the team whose game state to reset
+        admin_service: Injected admin service
+
+    Returns:
+        Success response
+    """
+    try:
+        admin_service.reset_team_game_state(team_name)
+        return SuccessResponse(
+            message=f"Game state reset successfully for team {team_name}"
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/reset-all")
+async def reset_all_teams(
+    admin_service: AdminService = Depends(get_admin_agent_service),
+) -> Dict[str, str]:
+    """Reset all teams' agents and game states to initial configuration.
 
     Args:
         admin_service: Injected admin service
 
     Returns:
-        List of team names without initialized agents
+        Dict mapping team names to reset status
+    """
+    try:
+        return admin_service.reset_all_teams()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/uninitialized")
+async def get_uninitialized_teams(
+    admin_service: AdminService = Depends(get_admin_agent_service),
+) -> List[str]:
+    """Get list of teams that don't have initialized agents or game states.
+
+    Args:
+        admin_service: Injected admin service
+
+    Returns:
+        List of team names without initialized agents or game states
     """
     try:
         return admin_service.get_uninitialized_teams()
@@ -95,22 +141,22 @@ async def get_uninitialized_teams(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/agent/clean-all", response_model=CleanAgentsResponse)
-async def clean_all_agents(
-    admin_service: AdminAgentService = Depends(get_admin_agent_service),
+@router.post("/clean-all", response_model=CleanTeamDataResponse)
+async def clean_all_team_data(
+    admin_service: AdminService = Depends(get_admin_agent_service),
 ) -> Dict[str, Any]:
-    """Clean/reset all agents by deleting their configurations.
+    """Clean/reset all team data by deleting agent configurations and game states.
 
-    WARNING: This is a destructive operation that will remove all agent configurations.
+    WARNING: This is a destructive operation that will remove all agent configurations and game states.
     Teams will need to be reinitialized after this operation.
 
     Args:
         admin_service: Injected admin service
 
     Returns:
-        Status of the operation including count of cleaned agents and any errors
+        Status of the operation including count of cleaned records and any errors
     """
     try:
-        return admin_service.clean_all_agents()
+        return admin_service.clean_all_team_data()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

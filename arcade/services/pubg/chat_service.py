@@ -69,6 +69,7 @@ class ChatService:
 
         # Create agent with previous response ID
         agent = FunctionCallingAgent(
+            team_name=team_name,
             callback_function=self.callback_function,
             model=model,
             temperature=temperature,
